@@ -10,6 +10,7 @@ configurations {
     legacy.extendsFrom defaultCfg
     tower.extendsFrom defaultCfg
     wave.extendsFrom defaultCfg
+    trace.extendsFrom defaultCfg
 }
 
 dependencies {
@@ -28,6 +29,7 @@ dependencies {
     azure   project(':plugins:nf-azure')
     tower   project(':plugins:nf-tower')
     // wave    project(':plugins:nf-wave')
+    trace    project(':plugins:nf-trace')
 }
 
 
@@ -136,7 +138,7 @@ task packAll(type: Jar) {
     archiveFileName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
+    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave+configurations.trace)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     

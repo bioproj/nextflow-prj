@@ -39,3 +39,6 @@ temp
 plugins-prod
 sandbox
 wave-tests
+trace.txt
+report.html
+timeline.html

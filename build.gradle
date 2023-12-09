@@ -77,11 +77,11 @@ allprojects {
     apply plugin: 'java-library'
     apply plugin: 'jacoco'
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(19)
-        }
-    }
+//    java {
+//        toolchain {
+//            languageVersion = JavaLanguageVersion.of(19)
+//        }
+//    }
 
     compileJava {
         options.release.set(11)

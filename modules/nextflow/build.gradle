@@ -17,6 +17,7 @@ compileGroovy {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
+    api(project(':nf-bioproj'))
     api "org.codehaus.groovy:groovy:3.0.19"
     api "org.codehaus.groovy:groovy-nio:3.0.19"
     api "org.codehaus.groovy:groovy-xml:3.0.19"
