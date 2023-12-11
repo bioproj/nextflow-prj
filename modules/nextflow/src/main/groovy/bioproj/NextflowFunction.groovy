@@ -26,7 +26,16 @@ class NextflowFunction {
             .withTopic(topic)
             .publishMessage([key, message])
     }
-
+    static void writeMessage(String topic, String message,String key){
+        KafkaConfig  config = new KafkaConfig( Global.session.config.navigate('kafka') as Map)
+        log.info("config.url:{}",config.url)
+        log.info("config.group:{}",config.group)
+        new PublisherTopic()
+            .withUrl(config.url)
+            .withGroup(config.group)
+            .withTopic(topic)
+            .publishMessage([key, message])
+    }
 
 
 }

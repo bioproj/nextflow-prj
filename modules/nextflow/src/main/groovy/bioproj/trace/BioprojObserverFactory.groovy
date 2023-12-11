@@ -12,7 +12,17 @@ class BioprojObserverFactory implements TraceObserverFactory {
         final config = session.config
         String endpoint = config.navigate('bioproj.endpoint') as String
 
-        final enabled = true //session.config.navigate('myplugin.enabled')
-        return enabled ? [ new BioprojObserver(session,endpoint) ] : []
+        final enabled = session.config.navigate('bioproj.enabled')
+        final kafkaEnabled = session.config.navigate('bioproj.kafkaEnabled')
+        if(enabled){
+            if(kafkaEnabled){
+                return   [ new BioprojKafkaObserver(session,endpoint) ]
+            }else {
+                return   [ new BioprojObserver(session,endpoint) ]
+            }
+        }else {
+            return []
+        }
+
     }
 }
