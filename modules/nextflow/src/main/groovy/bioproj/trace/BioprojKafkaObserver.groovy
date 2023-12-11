@@ -199,7 +199,7 @@ class BioprojKafkaObserver implements TraceObserver{
     private LinkedBlockingQueue<ProcessEvent> events = new LinkedBlockingQueue()
     /**
      * Check the URL and create an HttpPost() object. If a invalid i.e. protocol is used,
-     * the constructor will raise an exception.
+     * the constructor will raise an exception.X
      *
      * The RegEx was taken and adapted from http://urlregex.com
      *
@@ -252,7 +252,7 @@ class BioprojKafkaObserver implements TraceObserver{
         this.httpClient = new SimpleHttpClient()
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
-        this.workflowId =  env.get('TOWER_WORKFLOW_ID')
+        this.workflowId =  env.get('NXF_WORKFLOW_ID')
         final req = makeCreateReq(session)
         sendEventMessage("W-"+workflowId,req)
 
@@ -296,17 +296,17 @@ class BioprojKafkaObserver implements TraceObserver{
         final req = makeBeginReq(session)
         sendEventMessage("P-"+workflowId,req)
 
-        final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
-
-        if( resp.error ) {
-            log.debug """\
-                Unexpected HTTP response
-                - endpoint    : $urlTraceBegin
-                - status code : $resp.code
-                - response msg: $resp.cause
-                """.stripIndent()
-            throw new AbortOperationException(resp.message)
-        }
+//        final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
+//
+//        if( resp.error ) {
+//            log.debug """\
+//                Unexpected HTTP response
+//                - endpoint    : $urlTraceBegin
+//                - status code : $resp.code
+//                - response msg: $resp.cause
+//                """.stripIndent()
+//            throw new AbortOperationException(resp.message)
+//        }
 
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
 
@@ -325,6 +325,7 @@ class BioprojKafkaObserver implements TraceObserver{
         final req = makeCompleteReq(session)
 
     }
+
 
 
     @Override
@@ -406,8 +407,8 @@ class BioprojKafkaObserver implements TraceObserver{
                     final req = makeHeartbeatReq()
 //                    def json = JsonOutput.toJson(req)
 //                    NextflowFunction.writeMessage("nextflow-trace",json,"test");
-                    final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
-                    logHttpResponse(urlTraceHeartbeat, resp)
+//                    final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
+//                    logHttpResponse(urlTraceHeartbeat, resp)
                     previous = now
                 }
                 continue
@@ -417,9 +418,15 @@ class BioprojKafkaObserver implements TraceObserver{
                 // send
                 final req = makeTasksReq(tasks.values())
                 def json = JsonOutput.toJson(req)
-                NextflowFunction.writeMessage("nextflow-trace",json,"T-"+workflowId);
-                final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
-                logHttpResponse(urlTraceProgress, resp)
+                if(complete){
+                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
+
+                }else {
+                    NextflowFunction.writeMessage("nextflow-trace",json,"T-"+workflowId);
+
+                }
+//                final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
+//                logHttpResponse(urlTraceProgress, resp)
 
                 // clean up for next iteration
                 previous = now
