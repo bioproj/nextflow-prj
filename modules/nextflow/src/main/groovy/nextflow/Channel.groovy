@@ -668,8 +668,8 @@ class Channel  {
         valid: Boolean
     ]
     static DataflowWriteChannel fromQuery(String query) {
-
-        return fromQuery(Collections.emptyMap(), query)
+        def map = session.config.navigate('mongo') as Map
+        return fromQuery(map, query)
 
     }
     static DataflowWriteChannel fromQuery(Map opts, String query) {

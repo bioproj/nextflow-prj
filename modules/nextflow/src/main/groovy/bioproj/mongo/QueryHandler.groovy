@@ -84,6 +84,7 @@ class QueryHandler implements QueryOp<QueryHandler> {
     QueryHandler perform(boolean async) {
 //        final conn = null //connect(dataSource ?: SqlDataSource.DEFAULT)
         MongoClient mongoClient = MongoClients.create(url);
+        println("mongo url:"+url)
 //        MongoDatabase database = mongoClient.getDatabase(databases);
 //        MongoCollection<Document> collection = database.getCollection(collection);
         if( async )
@@ -115,10 +116,12 @@ class QueryHandler implements QueryOp<QueryHandler> {
     protected void query0(MongoClient mongoClient) {
         try{
             MongoDatabase database = mongoClient.getDatabase(databases);
-            MongoCollection<Document> collection = database.getCollection(collection);
+            MongoCollection<Document> collections = database.getCollection(collection);
             Document query = new Document("_id",id);
-
-            Document first = collection.find(query).first();
+            println("mongo databases:"+databases)
+            println("mongo collection:"+collection)
+            println("mongo id:"+id)
+            Document first = collections.find(query).first();
             if( first ==null) return
 //        System.out.println(first);
             if(first.samples){
