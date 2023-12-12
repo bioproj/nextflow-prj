@@ -16,6 +16,11 @@
 
 package nextflow
 
+import bioproj.mongo.MongoConfig
+import bioproj.mongo.MongoUitls
+import bioproj.mongo.QueryHandler
+import nextflow.util.CheckHelper
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -654,6 +659,68 @@ class Channel  {
     static private void fetchSraFiles0(SraExplorer explorer) {
         def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
         fromPath0Future = future.exceptionally(Channel.&handlerException)
+    }
+
+
+
+    private static final Map OFTASKS_PARAMS = [
+        project: String,
+        valid: Boolean
+    ]
+    static DataflowWriteChannel fromQuery(String query) {
+
+        return fromQuery(Collections.emptyMap(), query)
+
+    }
+    static DataflowWriteChannel fromQuery(Map opts, String query) {
+//        CheckHelper.checkParams('fromQuery', opts, QUERY_PARAMS)
+//        def target = new DataflowQueue()
+        return queryToChannel(query, opts)
+//        return target
+    }
+    static DataflowWriteChannel queryToChannel(String query, Map opts) {
+        final channel = CH.create()
+//        final dataSource = dataSourceFromOpts(opts)
+
+        final handler = new QueryHandler()
+            .withUrl("mongodb://192.168.10.177:27017")
+            .withDatabase("test-api")
+            .withCollection("task")
+            .withId(query)
+            .withTarget(channel)
+            .withOpts(opts)
+
+        if(NF.dsl2) {
+            session.addIgniter {-> handler.perform(false) }
+        }
+        else {
+            handler.perform(false)
+        }
+        return channel
+    }
+
+
+    private static DataflowWriteChannel test(Map opts, String query) {
+        final channel = CH.create()
+        session.addIgniter(it -> emitTasks(channel, query, opts) )
+        return channel
+    }
+    protected static void emitTasks(DataflowWriteChannel channel, String query, Map opts) {
+        MongoConfig config = new MongoConfig( session.config.navigate('mongo') as Map)
+        String project = opts.project
+        Boolean valid = opts.valid
+
+        MongoUitls.getMongo()
+
+//        def json = new JsonSlurper().parseText(response.toString())
+//        json['data'].each(it->{
+//            def mata = [dataKey: it['dataKey'], species: it['species'],"taskId":it["taskId"],"singleEnd":false]
+//            def fastq = [it['fastq1'], it['fastq2']]
+//            channel.bind([mata,fastq])
+////            list_of_tweets.add()
+//        })
+        channel.bind(["aaa","bbb"])
+        channel.bind(Channel.STOP)
     }
 
 }

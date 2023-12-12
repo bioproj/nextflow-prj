@@ -59,6 +59,7 @@ dependencies {
 
     //自定义
     implementation 'org.apache.kafka:kafka-clients:2.6.3'
+    implementation 'org.mongodb:mongo-java-driver:3.12.11'
 }
 
 
