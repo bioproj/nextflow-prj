@@ -320,10 +320,11 @@ class BioprojKafkaObserver implements TraceObserver{
         events << new ProcessEvent(completed: true)
         // wait the submission of pending events
         sender.join()
+        println ">>>>>>>>>>>>>>>>>> bioproj onFlowComplete!"
         // notify the workflow completion
         terminated = true
         final req = makeCompleteReq(session)
-
+        sendEventMessage("C-"+workflowId,req)
     }
 
 
@@ -418,13 +419,13 @@ class BioprojKafkaObserver implements TraceObserver{
                 // send
                 final req = makeTasksReq(tasks.values())
                 def json = JsonOutput.toJson(req)
-                if(complete){
-                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
+//                if(complete){
+//                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
+//
+//                }else {
+                NextflowFunction.writeMessage("nextflow-trace",json,"T-"+workflowId);
 
-                }else {
-                    NextflowFunction.writeMessage("nextflow-trace",json,"T-"+workflowId);
-
-                }
+//                }
 //                final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
 //                logHttpResponse(urlTraceProgress, resp)
 
