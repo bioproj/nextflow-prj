@@ -282,7 +282,7 @@ class BioprojReports {
     }
 
     protected static String convertToGlobPattern(String reportKey) {
-        final prefix = reportKey.startsWith("**/") ? "" : "**/"
+        final prefix = reportKey.startsWith("**/") ? "" : "**/**"
         return "glob:${prefix}${reportKey}"
     }
 }
