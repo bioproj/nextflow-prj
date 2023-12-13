@@ -1,17 +1,13 @@
 package bioproj.trace
 
 import bioproj.NextflowFunction
-import bioproj.events.kafa.KafkaConfig
-import bioproj.events.kafa.PublisherTopic
 import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.Global
 import nextflow.Session
-import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -50,6 +46,7 @@ class BioprojKafkaObserver implements TraceObserver{
     private ResourcesAggregator aggregator
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
     private Map<String,Integer> schema = Collections.emptyMap()
+    private BioprojReports reports
 
     void setWorkspaceId(String workspaceId) {
         this.workspaceId = workspaceId
@@ -238,6 +235,7 @@ class BioprojKafkaObserver implements TraceObserver{
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
         this.generator = BioprojJsonGenerator.create(schema)
+        this.reports = new BioprojReports(session)
     }
 
 
@@ -255,7 +253,7 @@ class BioprojKafkaObserver implements TraceObserver{
         this.workflowId =  env.get('NXF_WORKFLOW_ID')
         final req = makeCreateReq(session)
         sendEventMessage("W-"+workflowId,req)
-
+        reports.flowCreate(workflowId)
 
 
 //        final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
@@ -273,8 +271,6 @@ class BioprojKafkaObserver implements TraceObserver{
 
 
     }
-
-
 
     /**
      * @see nextflow.processor.TaskProcessor#run()
@@ -309,7 +305,7 @@ class BioprojKafkaObserver implements TraceObserver{
 //        }
 
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-
+        reports.start()
 
         println "Okay, let's begin!"
     }
@@ -320,6 +316,7 @@ class BioprojKafkaObserver implements TraceObserver{
         events << new ProcessEvent(completed: true)
         // wait the submission of pending events
         sender.join()
+        reports.flowComplete()
         println ">>>>>>>>>>>>>>>>>> bioproj onFlowComplete!"
         // notify the workflow completion
         terminated = true
@@ -375,6 +372,8 @@ class BioprojKafkaObserver implements TraceObserver{
     @Override
     void onFilePublish(Path destination, Path source) {
         println "I published a file! It's located at ${destination.toUriString()}"
+        final result = reports.filePublish(destination)
+
     }
 
 
@@ -419,6 +418,7 @@ class BioprojKafkaObserver implements TraceObserver{
                 // send
                 final req = makeTasksReq(tasks.values())
                 def json = JsonOutput.toJson(req)
+                def json2 = generator.toJson(req)
 //                if(complete){
 //                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
 //

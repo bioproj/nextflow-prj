@@ -42,3 +42,5 @@ wave-tests
 trace.txt
 report.html
 timeline.html
+nf-*.tsv
+null
