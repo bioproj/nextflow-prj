@@ -36,7 +36,7 @@ class PublisherTopic {
     }
 
     private KafkaProducer<String,String>createProducer(){
-        Thread.currentThread().setContextClassLoader(null)
+//        Thread.currentThread().setContextClassLoader(null)
         Properties properties = new Properties()
         properties[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = url
         properties[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer.class.name

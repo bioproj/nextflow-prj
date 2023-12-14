@@ -1,12 +1,15 @@
 package bioproj.trace
 
 import bioproj.NextflowFunction
+import bioproj.events.kafa.KafkaConfig
+import bioproj.events.kafa.PublisherTopic
 import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -16,6 +19,8 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.SimpleHttpClient
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
 
 import java.nio.file.Path
 import java.time.Instant
@@ -47,6 +52,8 @@ class BioprojKafkaObserver implements TraceObserver{
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
     private Map<String,Integer> schema = Collections.emptyMap()
     private BioprojReports reports
+    private KafkaProducer<String,String> producer
+    private String topic
 
     void setWorkspaceId(String workspaceId) {
         this.workspaceId = workspaceId
@@ -235,10 +242,32 @@ class BioprojKafkaObserver implements TraceObserver{
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
         this.generator = BioprojJsonGenerator.create(schema)
-        this.reports = new BioprojReports(session)
+
+        KafkaConfig config = new KafkaConfig( Global.session.config.navigate('kafka') as Map)
+//        log.info("config.url:{}",config.url)
+//        log.info("config.group:{}",config.group)
+        this.producer =    new PublisherTopic()
+            .withUrl(config.url)
+            .withGroup(config.group)
+            .createProducer()
+        this.topic = "nextflow-trace"
+        this.reports = new BioprojReports(session,producer,topic)
+
     }
-
-
+    void publishMessage(Object message){
+//        KafkaProducer<String,String> producer = createProducer()
+        ProducerRecord<String,String> record
+        if( message instanceof List) {
+            def list = message as List
+            record = new ProducerRecord<>(topic, list[0].toString(), list[1].toString())
+        }else {
+            record = new ProducerRecord<>(topic, message.toString())
+        }
+        producer.send(record)
+    }
+    void writeMessage(String message,String key){
+        publishMessage([key, message])
+    }
 
     /**
      * @see nextflow.script.ScriptRunner#execute()
@@ -317,11 +346,16 @@ class BioprojKafkaObserver implements TraceObserver{
         // wait the submission of pending events
         sender.join()
         reports.flowComplete()
+
         println ">>>>>>>>>>>>>>>>>> bioproj onFlowComplete!"
         // notify the workflow completion
         terminated = true
         final req = makeCompleteReq(session)
         sendEventMessage("C-"+workflowId,req)
+
+
+        producer.flush()
+        producer.close()
     }
 
 
@@ -423,7 +457,7 @@ class BioprojKafkaObserver implements TraceObserver{
 //                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
 //
 //                }else {
-                NextflowFunction.writeMessage("nextflow-trace",json,"T-"+workflowId);
+               writeMessage(json,"T-"+workflowId);
 
 //                }
 //                final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
@@ -444,7 +478,8 @@ class BioprojKafkaObserver implements TraceObserver{
     protected void sendEventMessage(String key, Map payload){
         final String json = payload != null ? generator.toJson(payload) : null
         Thread.start('Tower-thread1', {
-            NextflowFunction.writeMessage("nextflow-trace",json,key);
+
+            writeMessage(json,key);
         })
     }
 

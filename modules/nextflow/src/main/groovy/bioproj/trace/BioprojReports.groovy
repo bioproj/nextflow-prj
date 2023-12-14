@@ -11,6 +11,8 @@ import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.processor.TaskId
 import nextflow.trace.TraceRecord
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
 
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -38,7 +40,8 @@ class BioprojReports {
     private AtomicInteger totalReports
     private Thread sender
     private String workflowId
-
+    private KafkaProducer<String,String> producer
+    private String topic
 //    void setWorkflowId(String workflowId) {
 //        this.workflowId = workflowId
 //    }
@@ -51,13 +54,28 @@ class BioprojReports {
     }
     private LinkedBlockingQueue<ProcessEvent> events = new LinkedBlockingQueue()
 
-    BioprojReports(Session session) {
+    BioprojReports(Session session,KafkaProducer<String,String> producer,String topic) {
         this.session = session
         this.yamlSlurper = new YamlSlurper()
         this.totalReports = new AtomicInteger(0)
+        this.producer = producer
+        this.topic  =topic
 
     }
-
+    void publishMessage(Object message){
+//        KafkaProducer<String,String> producer = createProducer()
+        ProducerRecord<String,String> record
+        if( message instanceof List) {
+            def list = message as List
+            record = new ProducerRecord<>(topic, list[0].toString(), list[1].toString())
+        }else {
+            record = new ProducerRecord<>(topic, message.toString())
+        }
+        producer.send(record)
+    }
+    void writeMessage(String message,String key){
+        publishMessage([key, message])
+    }
     /**
      * On flow create if there is a tower config yaml for current workflow
      * start writing a reports file at the background.
@@ -254,7 +272,7 @@ class BioprojReports {
 //                logHttpResponse(urlTraceProgress, resp)
                 def json = JsonOutput.toJson(reportsEntries)
                 println(json)
-                NextflowFunction.writeMessage("nextflow-trace",json,"R-"+workflowId);
+                writeMessage(json,"R-"+workflowId);
 //                println "1111111111111111111111111111"
                 // clean up for next iteration
                 previous = now
