@@ -127,7 +127,7 @@ class QueryHandler implements QueryOp<QueryHandler> {
             if(first.samples){
                 def smaples = first.samples
                 for(it in smaples){
-                    def mata = [dataKey: it['dataKey'], species: it['species'],"taskId":id,"singleEnd":false]
+                    def mata = [name: it['name'],dataKey: it['dataKey'], species: it['species'],"taskId":id,"singleEnd":false]
                     def fastq = [it['fastq1'], it['fastq2']]
                     target.bind([mata,fastq])
                 }
