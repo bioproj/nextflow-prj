@@ -685,7 +685,7 @@ class Channel  {
         final handler = new QueryHandler()
             .withUrl("mongodb://192.168.10.177:27017")
             .withDatabase("test-api")
-            .withCollection("task")
+            .withCollection("samples")
             .withId(query)
             .withTarget(channel)
             .withOpts(opts)

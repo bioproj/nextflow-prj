@@ -117,22 +117,22 @@ class QueryHandler implements QueryOp<QueryHandler> {
         try{
             MongoDatabase database = mongoClient.getDatabase(databases);
             MongoCollection<Document> collections = database.getCollection(collection);
-            Document query = new Document("_id",id);
+            Document query = new Document("workflowId",id);
             println("mongo databases:"+databases)
             println("mongo collection:"+collection)
             println("mongo id:"+id)
-            Document first = collections.find(query).first();
-            if( first ==null) return
+            def  samples = collections.find(query).findAll();
+            if( samples ==null) return
 //        System.out.println(first);
-            if(first.samples){
-                def smaples = first.samples
-                for(it in smaples){
-                    def mata = [name: it['name'],dataKey: it['dataKey'], species: it['species'],"taskId":id,"singleEnd":false]
-                    def fastq = [it['fastq1'], it['fastq2']]
-                    target.bind([mata,fastq])
-                }
-
+//            if(first.samples){
+//                def smaples = first.samples
+            for(it in samples){
+                def mata = [name: it['name'],dataKey: it['dataKey'], species: it['species'],"workflowId":id,"singleEnd":false]
+                def fastq = [it['fastq1'], it['fastq2']]
+                target.bind([mata,fastq])
             }
+
+//            }
         }finally{
             target.bind(Channel.STOP)
             mongoClient.close();
