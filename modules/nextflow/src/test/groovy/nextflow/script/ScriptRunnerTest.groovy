@@ -60,9 +60,9 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         when:
         def result = new MockScriptRunner(config)
-                .setScript(script)
                 .execute()
 
+        print(111)
         // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
