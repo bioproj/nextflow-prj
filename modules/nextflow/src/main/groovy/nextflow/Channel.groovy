@@ -16,6 +16,8 @@
 
 package nextflow
 
+import bioproj.events.kafa.KafkaConfig
+import bioproj.events.kafa.TopicHandler
 import bioproj.mongo.MongoConfig
 import bioproj.mongo.MongoUitls
 import bioproj.mongo.QueryHandler
@@ -722,5 +724,37 @@ class Channel  {
         channel.bind(["aaa","bbb"])
         channel.bind(Channel.STOP)
     }
+
+
+    static DataflowWriteChannel fromTopic(String topic, java.time.Duration duration=java.time.Duration.ofSeconds(1)) {
+        topicToChannel(topic, duration, false)
+    }
+
+    static DataflowWriteChannel watchTopic(String topic, java.time.Duration duration=java.time.Duration.ofSeconds(1)) {
+        topicToChannel(topic, duration, true)
+    }
+    private static DataflowWriteChannel topicToChannel(String topic, java.time.Duration duration, boolean listening){
+        KafkaConfig config = new KafkaConfig( session.config.navigate('kafka') as Map)
+        final channel = CH.create()
+
+        final handler = new TopicHandler()
+            .withSession(this.session)
+            .withUrl(config.url)
+            .withGroup(config.group)
+            .withTopic(topic)
+            .withListening(listening)
+            .withTarget(channel)
+            .withDuration(duration)
+        if(NF.dsl2) {
+            session.addIgniter {-> handler.perform() }
+        }
+        else {
+            handler.perform()
+        }
+        return channel
+    }
+
+
+
 
 }
