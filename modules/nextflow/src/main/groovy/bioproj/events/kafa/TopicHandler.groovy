@@ -1,5 +1,6 @@
 package bioproj.events.kafa
 
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -104,8 +105,13 @@ class TopicHandler {
         try {
             final records = consumer.poll(duration)
             records.each {
-                def values = it.value().split(",").toList()
-                target << [ it.key(), values]
+//                def values = it.value().split(",").toList()
+//                target << [ it.key(), values]
+
+                def map = new JsonSlurper().parseText(it.value())
+                def mata = [id: map['dataKey'],number: map['number'],dataKey: map['dataKey'], sampleType: map['sampleType'],userName: map['userName'],"single_end":false]
+                def fastq = [map['fastq1'], map['fastq2']]
+                target.bind([mata,fastq])
             }
         }catch(Exception e){
             log.error "Exception reading kafka topic $topic",e
