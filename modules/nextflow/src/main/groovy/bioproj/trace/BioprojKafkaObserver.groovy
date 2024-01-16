@@ -451,8 +451,8 @@ class BioprojKafkaObserver implements TraceObserver{
             if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
                 // send
                 final req = makeTasksReq(tasks.values())
-                def json = JsonOutput.toJson(req)
-                def json2 = generator.toJson(req)
+//                def json = JsonOutput.toJson(req)
+                def json = generator.toJson(req)
 //                if(complete){
 //                    NextflowFunction.writeMessage("nextflow-trace",json,"C-"+workflowId);
 //
