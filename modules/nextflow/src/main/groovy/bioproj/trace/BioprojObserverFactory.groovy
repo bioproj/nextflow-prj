@@ -18,7 +18,8 @@ class BioprojObserverFactory implements TraceObserverFactory {
             if(kafkaEnabled){
                 return   [ new BioprojKafkaObserver(session,endpoint) ]
             }else {
-                return   [ new BioprojObserver(session,endpoint) ]
+                return   [ new BioprojMongoObserver(session,endpoint) ]
+//                return   [ new BioprojObserver(session,endpoint) ]
             }
         }else {
             return []

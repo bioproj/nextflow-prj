@@ -1,4 +1,4 @@
-package groovy.nextflow.bioproj
+package nextflow.bioproj
 
 import nextflow.Global
 

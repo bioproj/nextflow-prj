@@ -2,13 +2,12 @@ apply plugin: 'groovy'
 
 sourceSets {
     main.java.srcDirs = []
-    main.groovy.srcDirs = ['src/main']
-    main.resources.srcDirs = ['src/resources']
-    test.groovy.srcDirs = ['src/test']
+    main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+    main.resources.srcDirs = ['src/main/resources']
     test.java.srcDirs = []
-    test.resources.srcDirs = []
+    test.groovy.srcDirs = ['src/test/groovy']
+    test.resources.srcDirs = ['src/test/resources']
 }
-
 
 dependencies {
     api project(':nf-commons')

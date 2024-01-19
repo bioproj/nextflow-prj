@@ -17,7 +17,7 @@
 package nextflow.script
 
 import bioproj.NextflowFunction
-import groovy.nextflow.bioproj.MyFunction
+import nextflow.bioproj.MyFunction
 
 import java.nio.file.Path
 
