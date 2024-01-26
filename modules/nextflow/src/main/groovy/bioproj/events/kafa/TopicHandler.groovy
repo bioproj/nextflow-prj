@@ -109,7 +109,7 @@ class TopicHandler {
 //                target << [ it.key(), values]
 
                 def map = new JsonSlurper().parseText(it.value())
-                def mata = [id: map['dataKey'],number: map['number'],dataKey: map['dataKey'], sampleType: map['sampleType'],userName: map['userName'],"single_end":false]
+                def mata = [id: map['number'],number: map['number'], sampleType: map['sampleType'],userName: map['userName'],"single_end":false]
                 def fastq = [map['fastq1'], map['fastq2']]
                 target.bind([mata,fastq])
             }

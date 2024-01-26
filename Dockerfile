@@ -10,3 +10,5 @@ RUN ln -s /bin/nextflow /bin/nf
 # docker login
 # docker push wybioinfo/nextflow:23.11.0
 # docker run --rm wybioinfo/nextflow:23.11.0 nf
+
+

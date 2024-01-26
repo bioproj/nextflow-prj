@@ -238,7 +238,7 @@ class BioprojMongoObserver implements TraceObserver{
 
 
 
-    BioprojKafkaObserver(Session session, String endpoint){
+    BioprojMongoObserver(Session session, String endpoint){
         this.session = session
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
