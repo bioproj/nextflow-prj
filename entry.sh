@@ -43,7 +43,7 @@ if [[ "$NXF_USRMAP" && "$NXF_GROUPMAP " ]]; then
 
 # create a `nextflow` user with the provided ID
 groupadd docker -g $NXF_GROUPMAP
-useradd -u "$NXF_USRMAP" -g $NXF_GROUPMAP  -s /bin/bash nextflow
+useradd -u "$NXF_USRMAP" -g $NXF_GROUPMAP -m  -s /bin/bash nextflow
 echo "user id:$NXF_USRMAP"
 echo "group id:$NXF_GROUPMAP"
 # echo "$@"
@@ -55,10 +55,11 @@ chown -R nextflow /.nextflow
 
 
 # finally run the target command with `nextflow` user
-su nextflow << EOF
-[[ "$NXF_DEBUG_ENTRY" ]] && set -x
-exec bash -c "$cli"
-EOF
+# su nextflow << EOF
+# [[ "$NXF_DEBUG_ENTRY" ]] && set -x
+# exec bash -c "$cli"
+# EOF
+runuser - nextflow -c "$cli"
 # sudo -u nextflow $@
 # otherwise just execute the command
 else
