@@ -1,4 +1,4 @@
-FROM wybioinfo/jdk:19
+FROM registry.cn-hangzhou.aliyuncs.com/wybioinfo/nextflowdev:23.11.0
 
 WORKDIR /bin
 COPY build/releases/nextflow-23.11.0-edge-all nextflow
