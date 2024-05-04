@@ -55,11 +55,11 @@ chown -R nextflow /.nextflow
 
 
 # finally run the target command with `nextflow` user
-# su nextflow << EOF
-# [[ "$NXF_DEBUG_ENTRY" ]] && set -x
-# exec bash -c "$cli"
-# EOF
-runuser - nextflow -c "$cli"
+su nextflow << EOF
+[[ "$NXF_DEBUG_ENTRY" ]] && set -x
+exec bash -c "$cli"
+EOF
+# runuser - nextflow -c "$cli"
 # sudo -u nextflow $@
 # otherwise just execute the command
 else

@@ -1,4 +1,7 @@
 FROM registry.cn-hangzhou.aliyuncs.com/wybioinfo/ubuntu-jdk:19
+RUN apt-get update -y
+RUN apt-get install -y  wget debianutils
+RUN apt-get clean 
 ENV NXF_HOME=/.nextflow
 COPY entry.sh /usr/local/bin/entry.sh
 RUN mkdir /.nextflow 
