@@ -16,6 +16,9 @@
 
 package nextflow.processor
 
+import nextflow.bioproj.utils.KafkaLock
+import org.checkerframework.checker.units.qual.K
+
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -406,8 +409,11 @@ class TaskPollingMonitor implements TaskMonitor {
         while( true ) {
             final long time = System.currentTimeMillis()
             final tasks = new ArrayList(runningQueue)
-            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
 
+            if(tasks.size()==0 && !KafkaLock.isEmpty()){
+                KafkaLock.empty();
+            }
+            log.debug "Scheduler queue size: ${tasks.size()} kafka size ${KafkaLock.size()} (iteration: ${++iteration})"
             // check all running tasks for termination
             checkAllTasks(tasks)
 

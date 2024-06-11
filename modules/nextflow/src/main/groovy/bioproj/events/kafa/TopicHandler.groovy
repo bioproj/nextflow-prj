@@ -6,6 +6,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
+import nextflow.bioproj.utils.KafkaLock
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -109,7 +110,20 @@ class TopicHandler {
 //                target << [ it.key(), values]
 
                 def map = new JsonSlurper().parseText(it.value())
-                def mata = [id: map['number'],number: map['number'], sampleType: map['sampleType'],userName: map['userName'],"single_end":false]
+                def analysisNumber = map['analysisNumber'] as String
+                log.info("分析编号: $analysisNumber")
+               if( KafkaLock.isLock(analysisNumber)){
+                   log.error "$analysisNumber 正在运行中！！！！！！！！！"
+                   return
+               }
+                KafkaLock.lock(analysisNumber)
+
+                def mata = [id:map['analysisNumber'],sampleNumber: map['sampleNumber'],experimentNumber: map['experimentNumber'], analysisNumber: map['analysisNumber'],"workflowId":map['workflowId'],"singleEnd":false,"single_end":false]
+                if(map['fastq1'] == map['fastq2']){
+                    log.error "fastq1:${map['fastq1']} 与 fastq2:${map['fastq2']}不能相同！"
+                    return
+                }
+//                def mata = [id: map['number'],number: map['number'], sampleType: map['sampleType'],userName: map['userName'],"single_end":false]
                 def fastq = [map['fastq1'], map['fastq2']]
                 target.bind([mata,fastq])
             }

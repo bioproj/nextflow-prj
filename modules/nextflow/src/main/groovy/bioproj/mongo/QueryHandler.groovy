@@ -1,5 +1,8 @@
 package bioproj.mongo
 
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCredential
+import com.mongodb.ServerAddress
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoCollection
@@ -16,16 +19,44 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.concurrent.CompletableFuture
+import java.util.stream.Collectors
 
 @Slf4j
 class QueryHandler implements QueryOp<QueryHandler> {
     private Integer batchSize
     private String url
+    private Integer port
     private DataflowWriteChannel target
     private String databases
     private String collection
     private String id
+    private String password
+    private String username
+    private String address
 
+    @Override
+    QueryOp withPassword(String password) {
+        this.password = password
+        return this
+    }
+
+    @Override
+    QueryOp withUsername(String username) {
+        this.username = username
+        return this
+    }
+
+    @Override
+    QueryOp withAddress(String address) {
+        this.address =address
+        return this
+    }
+
+    @Override
+    QueryOp withPort(Integer port) {
+        this.port = port
+        return this
+    }
 
     @Override
     QueryOp withStatement(String stm) {
@@ -73,6 +104,14 @@ class QueryHandler implements QueryOp<QueryHandler> {
             this.databases =opts.databases
         if( opts.collection)
             this.collection =opts.collection
+        if(opts.password)
+            this.password = opts.password
+        if(opts.username)
+            this.username = opts.username
+        if(opts.port)
+            this.port = opts.port
+        if(opts.address)
+            this.address = opts.address
 //        if( opts.batchDelay )
 //            this.batchDelayMillis = opts.batchDelay as long
         return this
@@ -84,6 +123,23 @@ class QueryHandler implements QueryOp<QueryHandler> {
     QueryHandler perform(boolean async) {
 //        final conn = null //connect(dataSource ?: SqlDataSource.DEFAULT)
         MongoClient mongoClient = MongoClients.create(url);
+
+
+//        String user = username; // 替换为你的用户名
+//        String database = databases; // 替换为你的数据库名
+//        char[] password = password.toCharArray(); // 替换为你的密码
+//
+//        MongoCredential credential = MongoCredential.createCredential(user, database, password);
+//        ServerAddress serverAddress = new ServerAddress(address, port);
+//
+//        MongoClient mongoClient = MongoClients.create(
+//            MongoClientSettings.builder()
+//                .applyToClusterSettings(builder ->
+//                    builder.hosts(Collections.singletonList(serverAddress)))
+//                .credential(credential)
+//                .build());
+
+
         println("mongo url:"+url)
 //        MongoDatabase database = mongoClient.getDatabase(databases);
 //        MongoCollection<Document> collection = database.getCollection(collection);
@@ -120,14 +176,22 @@ class QueryHandler implements QueryOp<QueryHandler> {
             Document query = new Document("workflowId",id);
             println("mongo databases:"+databases)
             println("mongo collection:"+collection)
-            println("mongo id:"+id)
+            println("mongo workflowId id:"+id)
             def  samples = collections.find(query).findAll();
-            if( samples ==null) return
+            List<String> filterCars = new ArrayList<>();
+            def filterSamples = samples.stream().filter(
+                e -> {
+                    boolean found = !filterCars.contains(e['experimentNumber']);
+                    filterCars.add(e['experimentNumber']);
+                    return found;
+                }
+            ).collect(Collectors.toList())
+            if( filterSamples ==null) return
 //        System.out.println(first);
 //            if(first.samples){
 //                def smaples = first.samples
-            for(it in samples){
-                def mata = [id: it['number'],number: it['number'], name: it['name'],species: it['species'],"workflowId":id,"singleEnd":false,"single_end":false]
+            for(it in filterSamples){
+                def mata = [id:it['experimentNumber'],sampleNumber: it['sampleNumber'],experimentNumber: it['experimentNumber'],analysisNumber: it['analysisNumber'], tenantName: it['tenantName'],species: it['species'],workflowId:it['workflowId'],"singleEnd":false,"single_end":false]
                 def fastq = [it['fastq1'], it['fastq2']]
                 target.bind([mata,fastq])
             }

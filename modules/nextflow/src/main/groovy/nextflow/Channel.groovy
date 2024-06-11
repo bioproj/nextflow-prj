@@ -685,9 +685,10 @@ class Channel  {
 //        final dataSource = dataSourceFromOpts(opts)
 
         final handler = new QueryHandler()
-            .withUrl("mongodb://192.168.10.177:27017")
-            .withDatabase("test-api")
-            .withCollection("samples")
+//            .withUrl("mongodb://192.168.10.177:27017")
+//            .withDatabase("test-api")
+//            .withCollection("samples")
+//            .withPassword("")
             .withId(query)
             .withTarget(channel)
             .withOpts(opts)

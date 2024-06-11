@@ -9,6 +9,10 @@ interface QueryOp<T extends QueryOp> {
 //    QueryOp withDataSource(SqlDataSource ds)
     QueryOp withOpts(Map options)
     QueryOp withUrl(String url);
+    QueryOp withPort(Integer port);
+    QueryOp withAddress(String address);
+    QueryOp withPassword(String password);
+    QueryOp withUsername(String username);
     QueryOp withDatabase(String database);
     QueryOp withCollection(String collections);
     QueryOp withId(String id);
