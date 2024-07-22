@@ -190,9 +190,14 @@ class QueryHandler implements QueryOp<QueryHandler> {
 //        System.out.println(first);
 //            if(first.samples){
 //                def smaples = first.samples
-            for(it in filterSamples){
-                def mata = [id:it['experimentNumber'],sampleNumber: it['sampleNumber'],experimentNumber: it['experimentNumber'],analysisNumber: it['analysisNumber'], tenantName: it['tenantName'],species: it['species'],workflowId:it['workflowId'],"singleEnd":false,"single_end":false]
-                def fastq = [it['fastq1'], it['fastq2']]
+            for(map in filterSamples){
+                def mata = [id:map['analysisNumber'],sampleNumber: map['sampleNumber'],experimentNumber: map['experimentNumber'], analysisNumber: map['analysisNumber'],"workflowId":map['workflowId'],analysisWorkflow:map['analysisWorkflow'],"singleEnd":false,"single_end":false]
+                if(map['fastq1'] == map['fastq2']){
+                    log.error "fastq1:${map['fastq1']} 与 fastq2:${map['fastq2']}不能相同！"
+                    return
+                }
+//                def mata = [id:it['experimentNumber'],sampleNumber: it['sampleNumber'],experimentNumber: it['experimentNumber'],analysisNumber: it['analysisNumber'], tenantName: it['tenantName'],species: it['species'],workflowId:it['workflowId'],analysisWorkflow:it['analysisWorkflow'],"singleEnd":false,"single_end":false]
+                def fastq = [map['fastq1'], map['fastq2']]
                 target.bind([mata,fastq])
             }
 
