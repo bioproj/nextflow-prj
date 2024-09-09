@@ -1,3 +1,18 @@
+```
+export JAVA_HOME=/home/wy/software/jdk-19
+export PATH=$JAVA_HOME/bin:$PATH
+BUILD_PACK=1 gradle8.4  packAll
+```
+```
+export JAVA_HOME=/home/wangyang/software/jdk-19
+export PATH=$JAVA_HOME/bin:$PATH
+BUILD_PACK=1 gradle8.4  packAll
+```
+```
+git branch  wydev
+git checkout wydev
+git branch --show-current
+```
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/_static/nextflow-logo-bg-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/_static/nextflow-logo-bg-light.png">

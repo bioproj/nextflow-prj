@@ -51,6 +51,9 @@ import nextflow.util.PathTrie
 @Slf4j
 @CompileStatic
 class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
+    private Map<String,String> env
+
+
 
     @Lazy
     static private final String OWNER = {
@@ -89,6 +92,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
+        env = System.getenv()
         this.executor = executor
         this.client = executor.client
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
@@ -99,7 +103,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** only for testing -- do not use */
     protected K8sTaskHandler() {
-
+        env = System.getenv()
     }
 
     /**
@@ -295,6 +299,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         result.'nextflow.io/taskName' = task.getName()
         result.'nextflow.io/processName' = task.getProcessor().getName()
         result.'nextflow.io/sessionId' = "uuid-${executor.getSession().uniqueId}" as String
+
+        if(env.containsKey("NXF_WORKFLOW_ID")){
+            result.workflowId = env.get("NXF_WORKFLOW_ID")
+        }
+
         if( task.config.queue )
             result.'nextflow.io/queue' = task.config.queue
         return result

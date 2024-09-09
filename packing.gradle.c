@@ -1,7 +1,9 @@
 configurations {
+    capsule
     defaultCfg.extendsFrom api 
     //provided
     console.extendsFrom defaultCfg
+    ga4gh.extendsFrom defaultCfg
     google.extendsFrom defaultCfg
     amazon.extendsFrom defaultCfg
     azure.extendsFrom defaultCfg
@@ -17,8 +19,10 @@ dependencies {
     defaultCfg "org.apache.ivy:ivy:2.5.2"
     // default cfg = runtime + httpfs + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
+    // Capsule manages the fat jar building process
+    capsule 'io.nextflow:capsule:1.1.1'
+    capsule 'io.nextflow:capsule-maven:1.0.3.2'
     console project(':plugins:nf-console')
-    google  project(':plugins:nf-google')
     ga4gh   project(':plugins:nf-ga4gh')
     // google  project(':plugins:nf-google')
     amazon  project(':plugins:nf-amazon')
@@ -92,42 +96,126 @@ protected coordinates( it ) {
 }
 
 /*
- * Compile and pack all packages
+ * Default nextflow package. It contains the capsule loader
  */
-task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packOne(type: Jar) {
+    dependsOn configurations.capsule, configurations.defaultCfg
+    archiveFileName = "nextflow-${version}-one.jar"
+
+    from (configurations.capsule.collect { zipTree(it) })
+
+    // main manifest attributes
+    def deps = resolveDeps('defaultCfg')
+
+    manifest.attributes(
+                'Main-Class'        : 'NextflowLoader',
+                'Application-Name'  : 'nextflow',
+                'Application-Class' : mainClassName,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.8.0',
+                'Caplets'           : 'MavenCapsule',
+                'Dependencies'      : deps
+    )
+
+    // enable snapshot dependencies lookup
+    if( version.endsWith('-SNAPSHOT') ) {
+        manifest.attributes 'Allow-Snapshots': true
+        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central seqera'
+    }
+    else {
+        manifest.attributes 'Repositories': 'central seqera'
+    }
+
     doLast {
-        def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
-        ant.copy(file: source, todir: releaseDir, overwrite: true)
-        ant.copy(file: source, todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir/nextflow-${version}-one.jar"
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
     }
 }
 
-task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packAll(type: Jar) {
+    dependsOn configurations.capsule, configurations.defaultCfg
+    archiveFileName = "nextflow-${version}-all.jar"
+
+    from jar // embed our application jar
+    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave+configurations.trace)
+    from (configurations.capsule.collect { zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
+                          'Application-Name'  : 'nextflow-all',
+                          'Application-Class' : mainClassName,
+                          'Application-Version': version,
+                          'Min-Java-Version'  : '1.8.0'
+                          )
+
+    manifest.attributes('Main-Class': 'NextflowLoader', 'amazon')
+    manifest.attributes('Main-Class': 'NextflowLoader', 'google')
+
+    if( project.hasProperty('GA4GH') ) {
+        println "The build will include GA4GH dependencies."
+        from(configurations.ga4gh)
+        manifest.attributes('Main-Class': 'CapsuleLoader', 'ga4gh')
+    }
 
     doLast {
-        file(releaseDir).mkdirs()
+        file(releaseDir).mkdir()
         // cleanup
-        def source = file("modules/nextflow/build/libs/nextflow-${version}-one.jar")
-        def target = file("$releaseDir/nextflow-${version}-dist"); target.delete()
+        def source = file("$buildDir/libs/nextflow-${version}-all.jar")
+        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
         // append the big jar
         target.withOutputStream {
-            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=dist')
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
             it << new FileInputStream(source)
         }
         // execute permission
         "chmod +x $target".execute()
         // done
-        println "+ Nextflow package `ALL` copied to: $target\n"
+        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
     }
 }
+
+task packCore(type: Jar) {
+    dependsOn configurations.capsule, configurations.defaultCfg
+    archiveFileName = "nextflow-${version}-core.jar"
+
+    from jar // embed our application jar
+    from (configurations.defaultCfg)
+    from (configurations.capsule.collect { zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
+            'Application-Name'  : 'nextflow-core',
+            'Application-Class' : mainClassName,
+            'Application-Version': version,
+            'Min-Java-Version'  : '1.8.0'
+    )
+
+    doLast {
+        file(releaseDir).mkdir()
+        // cleanup
+        def source = file("$buildDir/libs/nextflow-${version}-core.jar")
+        def target = file("$releaseDir/nextflow-${version}-core"); target.delete()
+        // append the big jar
+        target.withOutputStream {
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << new FileInputStream(source)
+        }
+        // execute permission
+        "chmod +x $target".execute()
+        // done
+        println "+ Nextflow package `CORE` copied to: $releaseDir\n"
+    }
+}
+
 
 /*
  * Compile and pack all packages
  */
-task pack( dependsOn: [packOne, packDist]) {
+task pack( dependsOn: [packOne, packAll]) {
 
 }
+
 
 task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 
@@ -170,11 +258,6 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
-task installScratch(type: Copy, dependsOn: ['pack']) {
-    from "$releaseDir/nextflow-$version-one.jar"
-    into "${rootProject.projectDir}/docker-scratch/.nextflow/framework/$version/"
-}
-
 /*
  * build, tag and publish a and new docker packaged nextflow release
  */
@@ -197,9 +280,10 @@ task dockerImage(type: Exec) {
  * DO NOT CALL IT DIRECTLY! Use the `make dockerPack` command instead
  */
 task dockerPack(type: Exec, dependsOn: ['packOne']) {
-
+    println '11111111111111111111111111111111111111'
     def source = new File("$releaseDir/nextflow-$version-one.jar")
     def target = new File("$buildDir/docker/.nextflow/framework/$version/")
+    println target
     def dockerBase = new File("$buildDir/docker")
     if( dockerBase.exists() ) dockerBase.deleteDir()
     dockerBase.mkdirs()
@@ -210,12 +294,14 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     COPY .nextflow /.nextflow
     COPY nextflow /usr/local/bin/nextflow
     COPY entry.sh /usr/local/bin/entry.sh
-    COPY dist/docker /usr/local/bin/docker
     ENV NXF_HOME=/.nextflow
     RUN chmod +x /usr/local/bin/nextflow /usr/local/bin/entry.sh
     RUN nextflow info
     ENTRYPOINT ["/usr/local/bin/entry.sh"]
     """
+    // RUN nextflow info
+    // COPY dist/docker /usr/local/bin/docker
+    // curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -226,7 +312,6 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     cp docker/entry.sh $buildDir/docker
     cd $buildDir/docker  
     mkdir -p dist
-    curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
     NXF_HOME=\$PWD/.nextflow ./nextflow info
     docker build -t nextflow/nextflow:$version .
     """.stripIndent()
@@ -244,7 +329,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
+    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
     def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/

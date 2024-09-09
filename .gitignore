@@ -40,3 +40,9 @@ plugins-prod
 sandbox
 wave-tests
 x/*
+
+trace.txt
+report.html
+timeline.html
+nf-*.tsv
+null

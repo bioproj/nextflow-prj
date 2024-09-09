@@ -16,6 +16,9 @@
 
 package nextflow.script
 
+import bioproj.NextflowFunction
+import nextflow.bioproj.MyFunction
+
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
@@ -117,6 +120,8 @@ class ScriptParser {
         importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
+        importCustomizer.addStaticStars( MyFunction.name )
+        importCustomizer.addStaticStars( NextflowFunction.name )
 
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )

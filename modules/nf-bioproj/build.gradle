@@ -1,0 +1,41 @@
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+    main.resources.srcDirs = ['src/main/resources']
+    test.java.srcDirs = []
+    test.groovy.srcDirs = ['src/test/groovy']
+    test.resources.srcDirs = ['src/test/resources']
+}
+
+dependencies {
+    api project(':nf-commons')
+    api "ch.qos.logback:logback-classic:1.4.6"
+    api "org.codehaus.groovy:groovy:3.0.19"
+    api "org.codehaus.groovy:groovy-nio:3.0.19"
+    api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
+
+    /* testImplementation inherited from top gradle build file */
+    testImplementation "org.codehaus.groovy:groovy-json:3.0.19" // needed by wiremock
+    testImplementation ('com.github.tomakehurst:wiremock:1.57') { exclude module: 'groovy-all' }
+    testImplementation ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
+
+    testImplementation(testFixtures(project(":nextflow")))
+
+
+
+
+    // nf-sqldb
+    api 'com.h2database:h2:1.4.200'
+    api 'mysql:mysql-connector-java:8.0.22'
+    api 'org.mariadb.jdbc:mariadb-java-client:2.7.0'
+    api 'org.mongodb:mongodb-driver-sync:4.10.2'
+
+    api 'org.postgresql:postgresql:42.2.23'
+    api 'org.xerial:sqlite-jdbc:3.36.0.3'
+    api 'org.duckdb:duckdb_jdbc:0.3.0'
+    api("org.codehaus.groovy:groovy-sql:3.0.10")
+
+
+}

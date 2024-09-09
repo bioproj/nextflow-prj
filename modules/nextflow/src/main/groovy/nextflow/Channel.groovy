@@ -16,6 +16,13 @@
 
 package nextflow
 
+import bioproj.events.kafa.KafkaConfig
+import bioproj.events.kafa.TopicHandler
+import bioproj.mongo.MongoConfig
+import bioproj.mongo.MongoUitls
+import bioproj.mongo.QueryHandler
+import nextflow.util.CheckHelper
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -656,5 +663,100 @@ class Channel  {
         def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
+
+
+
+    private static final Map OFTASKS_PARAMS = [
+        project: String,
+        valid: Boolean
+    ]
+    static DataflowWriteChannel fromQuery(String query) {
+        def map = session.config.navigate('mongo') as Map
+        return fromQuery(map, query)
+
+    }
+    static DataflowWriteChannel fromQuery(Map opts, String query) {
+//        CheckHelper.checkParams('fromQuery', opts, QUERY_PARAMS)
+//        def target = new DataflowQueue()
+        return queryToChannel(query, opts)
+//        return target
+    }
+    static DataflowWriteChannel queryToChannel(String query, Map opts) {
+        final channel = CH.create()
+//        final dataSource = dataSourceFromOpts(opts)
+
+        final handler = new QueryHandler()
+//            .withUrl("mongodb://192.168.10.177:27017")
+//            .withDatabase("test-api")
+//            .withCollection("samples")
+//            .withPassword("")
+            .withId(query)
+            .withTarget(channel)
+            .withOpts(opts)
+
+        if(NF.dsl2) {
+            session.addIgniter {-> handler.perform(false) }
+        }
+        else {
+            handler.perform(false)
+        }
+        return channel
+    }
+
+
+    private static DataflowWriteChannel test(Map opts, String query) {
+        final channel = CH.create()
+        session.addIgniter(it -> emitTasks(channel, query, opts) )
+        return channel
+    }
+    protected static void emitTasks(DataflowWriteChannel channel, String query, Map opts) {
+        MongoConfig config = new MongoConfig( session.config.navigate('mongo') as Map)
+        String project = opts.project
+        Boolean valid = opts.valid
+
+        MongoUitls.getMongo()
+
+//        def json = new JsonSlurper().parseText(response.toString())
+//        json['data'].each(it->{
+//            def mata = [dataKey: it['dataKey'], species: it['species'],"taskId":it["taskId"],"singleEnd":false]
+//            def fastq = [it['fastq1'], it['fastq2']]
+//            channel.bind([mata,fastq])
+////            list_of_tweets.add()
+//        })
+        channel.bind(["aaa","bbb"])
+        channel.bind(Channel.STOP)
+    }
+
+
+    static DataflowWriteChannel fromTopic(String topic, java.time.Duration duration=java.time.Duration.ofSeconds(1)) {
+        topicToChannel(topic, duration, false)
+    }
+
+    static DataflowWriteChannel watchTopic(String topic, java.time.Duration duration=java.time.Duration.ofSeconds(1)) {
+        topicToChannel(topic, duration, true)
+    }
+    private static DataflowWriteChannel topicToChannel(String topic, java.time.Duration duration, boolean listening){
+        KafkaConfig config = new KafkaConfig( session.config.navigate('kafka') as Map)
+        final channel = CH.create()
+
+        final handler = new TopicHandler()
+            .withSession(this.session)
+            .withUrl(config.url)
+            .withGroup(config.group)
+            .withTopic(topic)
+            .withListening(listening)
+            .withTarget(channel)
+            .withDuration(duration)
+        if(NF.dsl2) {
+            session.addIgniter {-> handler.perform() }
+        }
+        else {
+            handler.perform()
+        }
+        return channel
+    }
+
+
+
 
 }
