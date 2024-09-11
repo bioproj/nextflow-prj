@@ -2,6 +2,12 @@
 
 # AWS Cloud
 
+:::{tip}
+This page describes how to manually set up and use Nextflow with AWS Cloud.
+You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/aws-batch) in [Seqera Platform](https://seqera.io/platform/),
+which automatically creates the required AWS infrastructure for you with minimal intervention.
+:::
+
 ## AWS security credentials
 
 Nextflow uses the [AWS security credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) to make programmatic calls to AWS services.
@@ -78,6 +84,17 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:ListTagsForResource"
   "ecr:DescribeImageScanFindings"
   ```
+
+:::{note}
+If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
+  ```json
+  "ecs:CreateCluster"
+  "ecs:DeleteCluster"
+  "ecs:DescribeClusters"
+  "ecs:ListClusters"
+  "ec2:DescribeSubnets"
+  ```
+:::
 
 ### S3 policies
 
@@ -173,7 +190,7 @@ The `aws` command can be made available by either (1) installing it in the conta
 To configure your pipeline for AWS Batch:
 
 1. Specify the AWS Batch {ref}`executor <awsbatch-executor>`
-2. Specify one or more AWS Batch queues with the {ref}`process-queue` directive
+2. Specify the AWS Batch queue with the {ref}`process-queue` directive
 3. Specify any Batch job container options with the {ref}`process-containerOptions` directive.
 
 An example `nextflow.config` file is shown below:
@@ -195,7 +212,9 @@ aws {
 }
 ```
 
-Different queues bound to the same or different Compute Environments can be configured according to each process' requirements.
+:::{tip}
+Each process can be configured with its own queue by using the {ref}`process-queue` directive in the process definition or via {ref}`config-process-selectors` in your Nextflow configuration.
+:::
 
 ## Container Options
 
@@ -256,7 +275,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 
 ### Create your custom AMI
 
-From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select 
+From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
 **AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}

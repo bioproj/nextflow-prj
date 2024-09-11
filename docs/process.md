@@ -662,14 +662,6 @@ ciao
 hello
 ```
 
-(process-input-set)=
-
-### Input type `set`
-
-:::{deprecated} 19.08.1-edge
-Use `tuple` instead.
-:::
-
 (process-input-tuple)=
 
 ### Input type `tuple`
@@ -679,20 +671,20 @@ The `tuple` qualifier allows you to group multiple values into a single input de
 ```groovy
 process tupleExample {
     input:
-    tuple val(x), path('latin.txt')
+    tuple val(x), path('input.txt')
 
     """
     echo "Processing $x"
-    cat - latin.txt > copy
+    cat input.txt > copy
     """
 }
 
 workflow {
-  Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
+  Channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
 }
 ```
 
-In the above example, the `tuple` input consists of the value `x` and the file `latin.txt`.
+In the above example, the `tuple` input consists of the value `x` and the file `input.txt`.
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
@@ -854,6 +846,7 @@ The following output qualifiers are available:
 - `env`: Emit the variable defined in the process environment with the specified name.
 - `stdout`: Emit the `stdout` of the executed process.
 - `tuple`: Emit multiple values.
+- `eval`: Emit the result of a script or command evaluated in the task execution context.
 
 ### Output type `val`
 
@@ -958,19 +951,19 @@ Available options:
   even if only one file is produced.
 
 `followLinks`
-: When `true` target files are return in place of any matching symlink (default: `true`)
+: When `true`, target files are returned in place of any matching symlink (default: `true`)
 
 `glob`
-: When `true` the specified name is interpreted as a glob pattern (default: `true`)
+: When `true`, the specified name is interpreted as a glob pattern (default: `true`)
 
 `hidden`
-: When `true` hidden files are included in the matching output files (default: `false`)
+: When `true`, hidden files are included in the matching output files (default: `false`)
 
 `includeInputs`
-: When `true` any input files matching an output file glob pattern are included.
+: When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`)
 
 `maxDepth`
-: Maximum number of directory levels to visit (default: no limit)
+: Maximum number of directory levels to visit (default: no limit).
 
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
@@ -1016,7 +1009,7 @@ Some caveats on glob pattern behavior:
 Although the input files matching a glob output declaration are not included in the resulting output channel, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
-Read more about glob syntax at the following link [What is a glob?][what is a glob?]
+Read more about glob syntax at the following link [What is a glob?][glob]
 
 ### Dynamic output file names
 
@@ -1057,21 +1050,13 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```groovy
-process myTask {
-    output:
-    env FOO
-
-    script:
-    '''
-    FOO=$(ls -la)
-    '''
-}
-
-workflow {
-    myTask | view { "directory contents: $it" }
-}
+```{literalinclude} snippets/process-out-env.nf
+:language: groovy
 ```
+
+:::{versionchanged} 23.12.0-edge
+Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
+:::
 
 (process-stdout)=
 
@@ -1079,28 +1064,26 @@ workflow {
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```groovy
-process sayHello {
-    output:
-    stdout
-
-    """
-    echo Hello world!
-    """
-}
-
-workflow {
-    sayHello | view { "I say... $it" }
-}
+```{literalinclude} snippets/process-stdout.nf
+:language: groovy
 ```
 
-(process-set)=
+(process-out-eval)=
 
-### Output type `set`
+### Output type `eval`
 
-:::{deprecated} 19.08.1-edge
-Use `tuple` instead.
+:::{versionadded} 24.02.0-edge
 :::
+
+The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
+
+```{literalinclude} snippets/process-out-eval.nf
+:language: groovy
+```
+
+Only one-line Bash commands are supported. You can use a semi-colon `;` to specify multiple Bash commands on a single line, and many interpreters can execute arbitrary code on the command line, e.g. `python -c 'print("Hello world!")'`.
+
+If the command fails, the task will also fail. In Bash, you can append `|| true` to a command to suppress any command failure.
 
 (process-out-tuple)=
 
@@ -1349,6 +1332,65 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
+(process-array)=
+
+### array
+
+:::{versionadded} 24.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `array` directive allows you to submit tasks as *job arrays* for executors that support it.
+
+A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+
+The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
+
+```groovy
+process cpu_task {
+    executor 'slurm'
+    array 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+Nextflow currently supports job arrays for the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`google-batch-executor`
+- {ref}`lsf-executor`
+- {ref}`pbs-executor`
+- {ref}`pbspro-executor`
+- {ref}`sge-executor`
+- {ref}`slurm-executor`
+
+A process using job arrays will collect tasks and submit each batch as a job array when it is ready. Any "leftover" tasks will be submitted as a partial job array.
+
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
+
+The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
+
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-resourcelimits`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 (process-beforescript)=
 
 ### beforeScript
@@ -1367,9 +1409,7 @@ process foo {
 }
 ```
 
-:::{note}
-When combined with the {ref}`container directive <process-container>`, the `beforeScript` will be executed outside the specified container. In other words, the `beforeScript` is always executed in the host environment.
-:::
+When the process is containerized (using the {ref}`process-container` directive), the `beforeScript` will be executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` will be executed outside the container.
 
 (process-cache)=
 
@@ -1408,6 +1448,30 @@ The following options are available:
 ### clusterOptions
 
 The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
+
+The cluster options can be a string:
+
+```groovy
+process foo {
+  clusterOptions '-x 1 -y 2'
+  // ...
+}
+```
+
+:::{versionchanged} 24.04.0
+Prior to this version, grid executors that require each option to be on a separate line in the job script would attempt to split multiple options using a variety of different conventions. Multiple options can now be specified more clearly using a string list as shown below.
+:::
+
+The cluster options can also be a string list:
+
+```groovy
+process foo {
+  clusterOptions '-x 1', '-y 2', '--flag'
+  // ...
+}
+```
+
+Grid executors that require one option per line will write each option to a separate line, while grid executors that allow multiple options per line will write all options to a single line, the same as with a string. This form is useful to control how the options are split across lines when it is required by the scheduler.
 
 :::{note}
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -1589,16 +1653,19 @@ The `errorStrategy` directive allows you to define how an error condition is man
 The following error strategies are available:
 
 `terminate` (default)
-: Terminate the execution as soon as an error condition is reported. Pending jobs are killed.
+: When a task fails, terminate the pipeline immediately. Pending and running jobs are killed.
 
 `finish`
-: Initiate an orderly pipeline shutdown when an error condition is raised, waiting for the completion of any submitted jobs.
+: When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline.
 
 `ignore`
-: Ignore process execution errors.
+: Ignore all task failures and complete the pipeline execution successfully.
+: :::{versionadded} 24.05.0-edge
+  When the `workflow.failOnIgnore` config option is set to `true`, the pipeline will return a non-zero exit code if one or more failed tasks were ignored.
+  :::
 
 `retry`
-: Re-submit any process that returns an error condition.
+: When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
 
@@ -1615,6 +1682,17 @@ process ignoreAnyError {
 
 :::{note}
 By definition, a command script fails when it ends with a non-zero exit status.
+:::
+
+:::{tip}
+To illustrate the differences between error strategies, consider the following example. Let's say you are analyzing 96 patient samples and the data from one is corrupted, causing the associated task to fail. The different ways to handle this failure are as follows:
+
+- **errorStrategy `terminate`**: Nextflow will cancel any other ongoing tasks at the time of the failure, exit the pipeline, and report an error.
+- **errorStrategy `finish`**: Nextflow will allow any other existing tasks to conclude (but not submit any more) and report an error.
+- **errorStrategy `ignore`**: Nextflow will continue submitting tasks for the remaining 95 samples, complete the workflow, and report a successful pipeline completion.
+- **errorStrategy `ignore` and `workflow.failOnIgnore` set to `true` in configuration**: The same behavior as setting the errorStrategy alone, except the pipeline will return an exit status of -1 and report an error.
+
+See {ref}`metadata-workflow` for more information on `workflow.failOnIgnore`.
 :::
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
@@ -1652,7 +1730,6 @@ The following executors are available:
 | `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
 | `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
 | `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
-| `ignite`              | [Apache Ignite](https://ignite.apache.org/) cluster                                         |
 | `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
 | `local`               | The computer where `Nextflow` is launched                                                   |
 | `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
@@ -1663,7 +1740,6 @@ The following executors are available:
 | `pbspro`              | [PBS Pro](https://www.pbsworks.com/) job scheduler                                          |
 | `sge`                 | Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/)                 |
 | `slurm`               | [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager              |
-| `tes`                 | [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service                        |
 | `uge`                 | Alias for the `sge` executor                                                                |
 
 The following example shows how to set the process's executor:
@@ -1830,7 +1906,7 @@ process foo {
 
 In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
 task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`. 
+queue named `on-demand-compute`.
 
 (process-maxerrors)=
 
@@ -2130,7 +2206,7 @@ The following options are available:
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
 `schedulerName: '<name>'`
-: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
@@ -2166,6 +2242,11 @@ The following options are available:
       operator: "Exists"
       effect: "NoSchedule"
   ```
+
+`ttlSecondsAfterFinished`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
 
 `volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*
@@ -2233,7 +2314,10 @@ Available options:
 : Enable or disable the publish rule depending on the boolean value specified (default: `true`).
 
 `failOnError`
-: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)
+: :::{versionchanged} 24.03.0-edge
+  The default value was change from `false` to `true`
+  :::
+: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `true`)
 
 `mode`
 : The file publishing method. Can be one of the following values:
@@ -2286,18 +2370,10 @@ process grid_job {
 }
 ```
 
-Multiple queues can be specified by separating their names with a comma for example:
-
-```groovy
-process grid_job {
-    queue 'short,long,cn-el6'
-    executor 'sge'
-
-    """
-    your task script here
-    """
-}
-```
+:::{tip}
+Grid executors allow specifying multiple queue names separating them with a comma e.g. `queue 'short,long,cn-el6'`.
+However, this does not generally apply to other executors such as AWS Batch, Azure Batch, Google Batch.
+:::
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -2339,6 +2415,43 @@ Resource labels in Azure are added to pools, rather than jobs, in order to facil
 :::
 
 See also: [label](#label)
+
+(process-resourcelimits)=
+
+### resourceLimits
+
+:::{versionadded} 24.04.0
+:::
+
+The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
+
+```groovy
+process my_task {
+  resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+  script:
+  '''
+  your_command --here
+  '''
+}
+```
+
+Or in the Nextflow configuration:
+
+```groovy
+process {
+    resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
+}
+```
+
+Resource limits can be defined for the following directives:
+
+- [cpus](#cpus)
+- [disk](#disk)
+- [memory](#memory)
+- [time](#time)
+
+Resource limits are a useful way to specify environment-specific limits alongside tasks with [dynamic resources](#dynamic-computing-resources). Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
 
 (process-scratch)=
 
@@ -2682,4 +2795,3 @@ process foo {
 ```
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[what is a glob?]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
