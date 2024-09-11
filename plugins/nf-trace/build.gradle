@@ -66,8 +66,10 @@ dependencies {
     // add here plugins depepencies
 
     // test configuration
-    testImplementation "org.codehaus.groovy:groovy:3.0.17"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.17"
+    api "org.apache.groovy:groovy:4.0.22"
+    api "org.apache.groovy:groovy-nio:4.0.22"
+//    testImplementation "org.codehaus.groovy:groovy:3.0.17"
+//    testImplementation "org.codehaus.groovy:groovy-nio:3.0.17"
 //    testImplementation "io.nextflow:nextflow:$nextflowVersion"
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation ("org.codehaus.groovy:groovy-test:3.0.17") { exclude group: 'org.codehaus.groovy' }
