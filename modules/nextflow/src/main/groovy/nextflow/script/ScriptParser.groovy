@@ -16,6 +16,9 @@
 
 package nextflow.script
 
+import bioproj.Channel2
+import bioproj.NextflowFunction
+
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
@@ -112,11 +115,13 @@ class ScriptParser {
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
+        importCustomizer.addImports( Channel2.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
         importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
+        importCustomizer.addStaticStars( NextflowFunction.name )
 
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
