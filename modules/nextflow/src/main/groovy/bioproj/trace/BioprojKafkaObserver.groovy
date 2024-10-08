@@ -133,6 +133,7 @@ class BioprojKafkaObserver implements TraceObserver{
     }
     protected WorkflowProgress getWorkflowProgress(boolean quick) {
         def stats = quick ? session.getStatsObserver().getQuickStats() : session.getStatsObserver().getStats()
+        log.info("pendingCount: ${stats.pendingCount} submittedCount:${stats.submittedCount} runningCount:${stats.runningCount} cachedCount:${stats.cachedCount} succeededCount:${stats.succeededCount} failedCount:${stats.failedCount} ")
         new WorkflowProgress(stats)
     }
     protected String underscoreToCamelCase(String str) {
