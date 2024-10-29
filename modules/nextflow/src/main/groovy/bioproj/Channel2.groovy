@@ -1,5 +1,6 @@
 package bioproj
 
+import bioproj.api.QueryApiHandler
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -677,6 +678,36 @@ class Channel2  {
         project: String,
         valid: Boolean
     ]
+
+
+    static DataflowWriteChannel fromApi(String query) {
+        def map = session.config.navigate('web') as Map
+        return fromApi(map, query)
+
+    }
+    static DataflowWriteChannel fromApi(Map opts, String query) {
+        return apiQueryToChannel(query, opts)
+    }
+
+    static DataflowWriteChannel apiQueryToChannel(String query, Map opts) {
+        final channel = CH.create()
+//        final dataSource = dataSourceFromOpts(opts)
+
+        final handler = new QueryApiHandler()
+            .withWorkflowId(query)
+            .withTarget(channel)
+            .withOpts(opts)
+
+        if(NF.dsl2) {
+            session.addIgniter {-> handler.perform(false) }
+        }
+        else {
+            handler.perform(false)
+        }
+        return channel
+    }
+
+
     static DataflowWriteChannel fromQuery(String query) {
         def map = session.config.navigate('mongo') as Map
         return fromQuery(map, query)
