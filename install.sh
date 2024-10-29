@@ -4,3 +4,5 @@ export PATH=$JAVA_HOME/bin:$PATH
 gradle8.4 build  -x test
 #BUILD_PACK=1 gradle8.4  packAll
 BUILD_PACK=1 gradle8.4 pack
+
+ git push origin nf-dev
